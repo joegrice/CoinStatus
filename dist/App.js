@@ -4,6 +4,8 @@ const express = require("express");
 const logger = require("morgan");
 const bodyParser = require("body-parser");
 const cors = require("cors");
+// Routers
+const PricesRouter_1 = require("./routes/PricesRouter");
 // Creates and configures an ExpressJS web server.
 class App {
     //Run configuration methods on the Express instance.
@@ -31,6 +33,9 @@ class App {
                 message: 'Hello World!'
             });
         });
+        this.express.use('/', router);
+        const pricesRouter = new PricesRouter_1.PricesRouter();
+        this.express.use('/prices', pricesRouter.router);
     }
 }
 exports.default = new App().express;

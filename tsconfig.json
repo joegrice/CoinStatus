@@ -1,17 +1,17 @@
 {
-    "compilerOptions": {
-      "moduleResolution": "node",
-      "target": "es6",
-      "module": "commonjs",
-      "sourceMap": true,
-      "outDir": "dist",
-      "rootDir": "src",
-      "mapRoot": "dist"
-    },
-    "include": [
-      "src/**/*.ts"
-    ],
-    "exclude": [
-      "node_modules"
-    ]
-  }
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "target": "es6",
+    "module": "commonjs",
+    "sourceMap": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "mapRoot": "dist"
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
