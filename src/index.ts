@@ -1,7 +1,10 @@
 import * as http from 'http';
 import * as debug from 'debug';
+import socketIo = require("socket.io");
 
 import App from './App';
+import { Price } from './models/Price';
+import { Connect } from './connection/Connect';
 
 debug('ts-express:server');
 
@@ -12,6 +15,29 @@ const server = http.createServer(App);
 server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);
+
+const io = socketIo(server);
+
+io.on("connection", socket => {
+  console.log("New client connected"), setInterval(
+    () => getApiAndEmit(socket),
+    10000
+  );
+  socket.on("disconnect", () => console.log("Client disconnected"));
+});
+
+const getApiAndEmit = async socket => {
+  try {
+    let query = "price?fsym=LTC&tsyms=BTC,ETH,USD,EUR,GBP";
+    var apiConnect = new Connect();
+    var res: Price = undefined;
+    apiConnect.callApi(query).then(function (priceList: Price) { res = priceList });
+    socket.emit("FromAPI", res);
+    console.log(res);
+  } catch (error) {
+    console.error(`Error: ${error.code}`);
+  }
+};
 
 function normalizePort(val: number | string): number | string | boolean {
   let port: number = (typeof val === 'string') ? parseInt(val, 10) : val;
