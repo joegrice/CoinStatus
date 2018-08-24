@@ -19,10 +19,9 @@ server.on('listening', onListening);
 const io = socketIo(server);
 
 io.on("connection", socket => {
-  console.log("New client connected"), setInterval(
-    () => getApiAndEmit(socket),
-    10000
-  );
+  console.log("New client connected");
+  getApiAndEmit(socket);
+  setInterval(() => getApiAndEmit(socket), 10000);
   socket.on("disconnect", () => console.log("Client disconnected"));
 });
 
@@ -30,10 +29,10 @@ const getApiAndEmit = async socket => {
   try {
     let query = "price?fsym=LTC&tsyms=BTC,ETH,USD,EUR,GBP";
     var apiConnect = new Connect();
-    var res: Price = undefined;
-    apiConnect.callApi(query).then(function (priceList: Price) { res = priceList });
-    socket.emit("FromAPI", res);
-    console.log(res);
+    apiConnect.callApi(query).then(function (priceList: Price) {
+      socket.emit("prices", priceList);
+      console.log(priceList);
+    });
   } catch (error) {
     console.error(`Error: ${error.code}`);
   }
