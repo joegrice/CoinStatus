@@ -1,0 +1,3 @@
+interface IPricesProps {
+    status: string;
+}
