@@ -14,8 +14,12 @@ class App extends React.Component<{}, IPricesState> {
 
   public componentDidMount() {
     const socket = io(this.state.endpoint);
-    socket.on("prices", (data: any) => {
+    socket.on("prices", (data: Price) => {
       this.setState({ prices: data });
+    });
+    
+    socket.on("currentAgg", (data: CurrentAgg) => {
+      this.setState({ currentAgg: data });
     });
   }
 
@@ -26,6 +30,12 @@ class App extends React.Component<{}, IPricesState> {
     } else {
       LTC = "Price Not available."
     }
+    let currentAggPrice = "";
+    if (this.state.currentAgg !== undefined) {
+      currentAggPrice = "LTC: £" + this.state.currentAgg.Price;
+    } else {
+      currentAggPrice = "Price Not available."
+    }
     return (
       <div className="App">
         <header className="App-header">
@@ -34,6 +44,9 @@ class App extends React.Component<{}, IPricesState> {
         </header>
         <p className="App-intro">
           {LTC}
+        </p>
+        <p className="currentAgg">
+          {currentAggPrice}
         </p>
       </div>
     );

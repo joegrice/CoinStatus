@@ -1,10 +1,13 @@
 import * as http from 'http';
 import * as debug from 'debug';
 import socketIo = require("socket.io");
+import * as ioClient from 'socket.io-client';
 
 import App from './App';
 import { Price } from './models/Price';
 import { Connect } from './connection/Connect';
+import { CurrentAgg } from './models/CurrentAgg';
+import { FileAction } from './models/FileChange';
 
 debug('ts-express:server');
 
@@ -23,7 +26,98 @@ io.on("connection", socket => {
   getApiAndEmit(socket);
   setInterval(() => getApiAndEmit(socket), 10000);
   socket.on("disconnect", () => console.log("Client disconnected"));
+
+  activateStream();
 });
+
+var currentAggs: CurrentAgg[] = [];
+
+function activateStream(): void {
+  var socket = ioClient.connect('https://streamer.cryptocompare.com/');
+  //Format: {SubscriptionId}~{ExchangeName}~{FromSymbol}~{ToSymbol}
+  //Use SubscriptionId 0 for TRADE, 2 for CURRENT, 5 for CURRENTAGG eg use key '5~CCCAGG~BTC~USD' to get aggregated data from the CCCAGG exchange 
+  //Full Volume Format: 11~{FromSymbol} eg use '11~BTC' to get the full volume of BTC against all coin pairs
+  //For aggregate quote updates use CCCAGG ags market
+  var subscription = ['5~CCCAGG~BTC~USD'];
+  socket.emit('SubAdd', { subs: subscription });
+  socket.on("m", function (message) {
+    var messageType = message.substring(0, message.indexOf("~"));
+    if (messageType == 5) {
+      var currentAgg: CurrentAgg = dataUnpack(message);
+      io.emit("currentAgg", currentAgg);
+      console.log(currentAgg.FromCurrency + " - " + currentAgg.ToCurrency + " - " + currentAgg.Price + " - " + currentAgg.Flag);
+    }
+  });
+}
+
+function dataUnpack(message): CurrentAgg {
+  var currentAgg: CurrentAgg = unpackMessage(message);
+  var resAgg: CurrentAgg = currentAgg;
+  var fileAction: FileAction = FileAction.UNTOUCHED;
+  if (currentAggs.length === 0) {
+    currentAggs.push(currentAgg);
+    console.log("FILE ADDED");
+    return resAgg;
+  }
+
+  var findAgg = currentAggs.find((agg: CurrentAgg) => {
+    return agg.FromCurrency === currentAgg.FromCurrency;
+  })
+
+  if (findAgg !== undefined) {
+    fileAction = updateCurrentAggs(findAgg, currentAgg);
+    if (fileAction as FileAction === FileAction.PARTUPDATE) {
+      resAgg = findAgg;
+    }
+  } else {
+    currentAggs.push(currentAgg);
+  }
+
+  /*  for (var aggKey in currentAggs) {
+      var currentAggsItem: CurrentAgg = currentAggs[aggKey];
+      if (currentAggsItem.FromCurrency === currentAgg.FromCurrency) {
+        fileAction = updateCurrentAggs(currentAggsItem, currentAgg);
+        if (fileAction as FileAction === FileAction.PARTUPDATE) {
+          resAgg = currentAggsItem;
+        }
+        break;
+      }
+    }
+  
+
+  if (fileAction as FileAction === FileAction.UNTOUCHED) {
+    currentAggs.push(currentAgg);
+  }*/
+
+  return resAgg;
+};
+
+function updateCurrentAggs(currentAggsItem: CurrentAgg, currentAgg: CurrentAgg): FileAction {
+  var result: FileAction = FileAction.UNTOUCHED;
+  if (currentAgg.Flag === "1") {
+    currentAggsItem.Flag = currentAgg.Flag;
+    currentAggsItem.Price = currentAgg.Price;
+    result = FileAction.FULLUPDATE;
+  } else if (currentAgg.Flag === "2") {
+    currentAggsItem.Flag = currentAgg.Flag;
+    currentAggsItem.Price = currentAgg.Price;
+    result = FileAction.FULLUPDATE;
+  } else if (currentAgg.Flag === "4") {
+    currentAggsItem.Flag = currentAgg.Flag;
+    result = FileAction.PARTUPDATE;
+  }
+  return result;
+}
+
+function unpackMessage(message): CurrentAgg {
+  var valuesArray = message.split("~");
+  var currentAgg: CurrentAgg = new CurrentAgg();
+  currentAgg.FromCurrency = valuesArray[2];
+  currentAgg.ToCurrency = valuesArray[3];
+  currentAgg.Flag = valuesArray[4];
+  currentAgg.Price = valuesArray[5];
+  return currentAgg;
+}
 
 const getApiAndEmit = async socket => {
   try {
