@@ -1,3 +1,5 @@
+import { CurrentAggFlag } from "./CurrentAggFlag";
+
 // '{SubscriptionId}~{ExchangeName}~{FromCurrency}~{ToCurrency}~{Flag}~{Price}~{LastUpdate}~{LastVolume}~{LastVolumeTo}~{LastTradeId}~{Volume24h}~{Volume24hTo}~{LastMarket}'
 // FLAG - 1-PRICEUP, 2-PRICEDOWN, 4-PRICEUNCHANGED
 export class CurrentAgg {
@@ -5,7 +7,7 @@ export class CurrentAgg {
     public ExchangeName: string;
     public FromCurrency: string;
     public ToCurrency: string;
-    public Flag: string;
+    public Flag: CurrentAggFlag;
     public Price: number;
     public LastUpdate: number;
     public LastVolume: number;

@@ -4,10 +4,9 @@ import socketIo = require("socket.io");
 import * as ioClient from 'socket.io-client';
 
 import App from './App';
-import { Price } from './models/Price';
-import { Connect } from './connection/Connect';
 import { CurrentAgg } from './models/CurrentAgg';
 import { FileAction } from './models/FileChange';
+import { CurrentAggFlag } from './models/CurrentAggFlag';
 
 debug('ts-express:server');
 
@@ -23,10 +22,7 @@ const io = socketIo(server);
 
 io.on("connection", socket => {
   console.log("New client connected");
-  getApiAndEmit(socket);
-  setInterval(() => getApiAndEmit(socket), 10000);
   socket.on("disconnect", () => console.log("Client disconnected"));
-
   activateStream();
 });
 
@@ -38,13 +34,13 @@ function activateStream(): void {
   //Use SubscriptionId 0 for TRADE, 2 for CURRENT, 5 for CURRENTAGG eg use key '5~CCCAGG~BTC~USD' to get aggregated data from the CCCAGG exchange 
   //Full Volume Format: 11~{FromSymbol} eg use '11~BTC' to get the full volume of BTC against all coin pairs
   //For aggregate quote updates use CCCAGG ags market
-  var subscription = ['5~CCCAGG~BTC~USD'];
+  var subscription = ['5~CCCAGG~BTC~USD', '5~CCCAGG~LTC~USD'];
   socket.emit('SubAdd', { subs: subscription });
   socket.on("m", function (message) {
     var messageType = message.substring(0, message.indexOf("~"));
     if (messageType == 5) {
       var currentAgg: CurrentAgg = dataUnpack(message);
-      io.emit("currentAgg", currentAgg);
+      io.emit("currentAggs", currentAggs);
       console.log(currentAgg.FromCurrency + " - " + currentAgg.ToCurrency + " - " + currentAgg.Price + " - " + currentAgg.Flag);
     }
   });
@@ -53,7 +49,6 @@ function activateStream(): void {
 function dataUnpack(message): CurrentAgg {
   var currentAgg: CurrentAgg = unpackMessage(message);
   var resAgg: CurrentAgg = currentAgg;
-  var fileAction: FileAction = FileAction.UNTOUCHED;
   if (currentAggs.length === 0) {
     currentAggs.push(currentAgg);
     console.log("FILE ADDED");
@@ -65,7 +60,7 @@ function dataUnpack(message): CurrentAgg {
   })
 
   if (findAgg !== undefined) {
-    fileAction = updateCurrentAggs(findAgg, currentAgg);
+    var fileAction: FileAction = updateCurrentAggs(findAgg, currentAgg);
     if (fileAction as FileAction === FileAction.PARTUPDATE) {
       resAgg = findAgg;
     }
@@ -73,36 +68,20 @@ function dataUnpack(message): CurrentAgg {
     currentAggs.push(currentAgg);
   }
 
-  /*  for (var aggKey in currentAggs) {
-      var currentAggsItem: CurrentAgg = currentAggs[aggKey];
-      if (currentAggsItem.FromCurrency === currentAgg.FromCurrency) {
-        fileAction = updateCurrentAggs(currentAggsItem, currentAgg);
-        if (fileAction as FileAction === FileAction.PARTUPDATE) {
-          resAgg = currentAggsItem;
-        }
-        break;
-      }
-    }
-  
-
-  if (fileAction as FileAction === FileAction.UNTOUCHED) {
-    currentAggs.push(currentAgg);
-  }*/
-
   return resAgg;
 };
 
 function updateCurrentAggs(currentAggsItem: CurrentAgg, currentAgg: CurrentAgg): FileAction {
   var result: FileAction = FileAction.UNTOUCHED;
-  if (currentAgg.Flag === "1") {
+  if (currentAgg.Flag as CurrentAggFlag === CurrentAggFlag.PRICEUP) {
     currentAggsItem.Flag = currentAgg.Flag;
     currentAggsItem.Price = currentAgg.Price;
     result = FileAction.FULLUPDATE;
-  } else if (currentAgg.Flag === "2") {
+  } else if (currentAgg.Flag as CurrentAggFlag === CurrentAggFlag.PRICEDOWN) {
     currentAggsItem.Flag = currentAgg.Flag;
     currentAggsItem.Price = currentAgg.Price;
     result = FileAction.FULLUPDATE;
-  } else if (currentAgg.Flag === "4") {
+  } else if (currentAgg.Flag as CurrentAggFlag === CurrentAggFlag.PRICEUNCHANGED) {
     currentAggsItem.Flag = currentAgg.Flag;
     result = FileAction.PARTUPDATE;
   }
@@ -118,19 +97,6 @@ function unpackMessage(message): CurrentAgg {
   currentAgg.Price = valuesArray[5];
   return currentAgg;
 }
-
-const getApiAndEmit = async socket => {
-  try {
-    let query = "price?fsym=LTC&tsyms=BTC,ETH,USD,EUR,GBP";
-    var apiConnect = new Connect();
-    apiConnect.callApi(query).then(function (priceList: Price) {
-      socket.emit("prices", priceList);
-      console.log(priceList);
-    });
-  } catch (error) {
-    console.error(`Error: ${error.code}`);
-  }
-};
 
 function normalizePort(val: number | string): number | string | boolean {
   let port: number = (typeof val === 'string') ? parseInt(val, 10) : val;
