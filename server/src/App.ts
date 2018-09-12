@@ -3,9 +3,6 @@ import * as logger from 'morgan';
 import * as bodyParser from 'body-parser';
 import * as cors from 'cors';
 
-// Routers
-import { PricesRouter } from './routes/PricesRouter';
-
 // Creates and configures an ExpressJS web server.
 class App {
 
@@ -40,8 +37,6 @@ class App {
             });
         });
         this.express.use('/', router);
-        const pricesRouter = new PricesRouter();
-        this.express.use('/prices', pricesRouter.router);
     }
 }
 

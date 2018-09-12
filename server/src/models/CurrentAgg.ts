@@ -16,4 +16,16 @@ export class CurrentAgg {
     public Volume24h: number;
     public Volume24hTo: number;
     public LastMarket: number;
+
+    constructor(message: string) {
+        this.unpackMessage(message);
+    }
+
+    unpackMessage(message): void {
+        var valuesArray = message.split("~");
+        this.FromCurrency = valuesArray[2];
+        this.ToCurrency = valuesArray[3];
+        this.Flag = valuesArray[4];
+        this.Price = valuesArray[5];
+      }
 }
