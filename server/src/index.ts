@@ -17,11 +17,12 @@ server.on('error', onError);
 server.on('listening', onListening);
 
 const io = socketIo(server);
-const socketService: SocketService = new SocketService(io);
-socketService.enableSockets();
 
 const currentAggStreamService: CurrentAggStreamService = new CurrentAggStreamService(io);
 currentAggStreamService.activateStream();
+
+const socketService: SocketService = new SocketService(io, currentAggStreamService);
+socketService.enableSockets();
 
 function normalizePort(val: number | string): number | string | boolean {
   let port: number = (typeof val === 'string') ? parseInt(val, 10) : val;
