@@ -6,6 +6,7 @@ import * as ioClient from 'socket.io-client';
 import socketIo = require("socket.io");
 import { CurrentAgg } from '../models/CurrentAgg';
 import { CurrentAggFlag } from '../models/CurrentAggFlag';
+import { SocketSuffix } from '../models/SocketSuffix';
 
 export class CurrentAggStreamService {
 
@@ -49,7 +50,7 @@ export class CurrentAggStreamService {
         if (valuesArray.length === 21) {
             const newAgg = new CurrentAgg(message);
             if (newAgg != undefined) {
-                this.io.emit(newAgg.FromCurrency, newAgg);
+                this.io.emit(newAgg.FromCurrency + SocketSuffix.ADD, newAgg);
                 console.log(newAgg.FromCurrency + " - " + newAgg.ToCurrency + " - " + newAgg.Price + " - " + newAgg.Flag);
             } else {
                 console.log("New CurrentAgg is invalid.")
@@ -63,16 +64,14 @@ export class CurrentAggStreamService {
         const currency: string = valuesArray[2];
         const flag: string = valuesArray[4];
         const price: string = valuesArray[5];
-        const updateSuffix: string = "~update";
         if (flag as CurrentAggFlag === CurrentAggFlag.PRICEUP) {
-            this.io.emit(currency + updateSuffix, flag + "~" + price);
+            this.io.emit(currency + SocketSuffix.UPDATE, flag + "~" + price);
             console.log(this.getCurrentTime() + " - " + currency + ": PRICE UP ~ " + price);
         } else if (flag as CurrentAggFlag === CurrentAggFlag.PRICEDOWN) {
-            this.io.emit(currency + updateSuffix, flag + "~" + price);
+            this.io.emit(currency + SocketSuffix.UPDATE, flag + "~" + price);
             console.log(this.getCurrentTime() + " - " + currency + ": PRICE DOWN ~ " + price);
         } else if (flag as CurrentAggFlag === CurrentAggFlag.PRICEUNCHANGED) {
-            const unchangedSuffix: string = "~unchanged";
-            this.io.emit(currency + unchangedSuffix, flag);
+            this.io.emit(currency + SocketSuffix.UNCHANGED, flag);
             console.log(this.getCurrentTime() + " - " + currency + ": PRICE UNCHANGED");
         }
     }
