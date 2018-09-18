@@ -22,7 +22,6 @@ const currentAggStreamService: CurrentAggStreamService = new CurrentAggStreamSer
 currentAggStreamService.activateStream();
 
 const socketService: SocketService = new SocketService(io, currentAggStreamService);
-socketService.enableSockets();
 
 function normalizePort(val: number | string): number | string | boolean {
   let port: number = (typeof val === 'string') ? parseInt(val, 10) : val;

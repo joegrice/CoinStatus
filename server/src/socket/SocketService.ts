@@ -1,29 +1,37 @@
 import { CurrentAggStreamService } from "../stream/CurrentAggStreamService";
+import * as ioClient from 'socket.io-client';
 
 export class SocketService {
 
-    io: SocketIO.Server;
     stream: CurrentAggStreamService
 
     constructor(ioInput: SocketIO.Server, streamInput: CurrentAggStreamService) {
-        this.io = ioInput;
         this.stream = streamInput;
+
+        this.enableConnectionSocket(ioInput);
     }
 
-    enableSockets(): void {
-        this.enableConnectionSocket();
-        this.enableDisconnectionSocket();
-    }
-
-    enableConnectionSocket(): void {
-        this.io.on("connection", socket => {
-            console.log("New client connected");
+    enableConnectionSocket(io: SocketIO.Server): void {
+        io.on("connection", (socket: SocketIO.Server) => {
+            this.enableSockets(socket);
             this.stream.sendCurrentAggs();
+            console.log("New client connected");
         });
     }
 
-    enableDisconnectionSocket(): void {
-        this.io.on("disconnect", socket => {
+    enableSockets(io: SocketIO.Server): void {
+        this.enableDisconnectionSocket(io);
+        this.enableAddNewSubSocket(io);
+    }
+
+    enableAddNewSubSocket(io: SocketIO.Server): void {
+        io.on("newsub", message =>  {
+            this.stream.addNewSub(message);
+        });
+    }    
+
+    enableDisconnectionSocket(io: SocketIO.Server): void {
+        io.on("disconnect", socket => {
             console.log("Client disconnected");
         });
     }

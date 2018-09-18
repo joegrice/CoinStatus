@@ -7,22 +7,32 @@ import { SocketSuffix } from './models/SocketSuffix';
 
 class App extends React.Component<{}, IPricesState> {
 
+  private socket: SocketIOClient.Socket;
+
   constructor(props: IPricesProps) {
     super(props);
     this.state = {
       endpoint: "http://127.0.0.1:3000"
     };
+
+    this.handleChange = this.handleChange.bind(this);
+    this.addNewSub = this.addNewSub.bind(this);
   }
 
   public componentDidMount() {
-    const socket = io(this.state.endpoint);
-    socket.on("currentAggs", (data: CurrentAgg[]) => {
+    this.socket = io(this.state.endpoint);
+    this.socket.on("currentAggs", (data: CurrentAgg[]) => {
       this.addCurrentAggs(data);
     });
-    socket.on("BTC" + SocketSuffix.UPDATE, (data: string) => {
+    this.socket.on("newsocket", (data: string) => {
+      this.socket.on(data + SocketSuffix.UPDATE, (updateData: string) => {
+        this.updateCurrentAgg(updateData);
+      });
+    });
+    this.socket.on("BTC" + SocketSuffix.UPDATE, (data: string) => {
       this.updateCurrentAgg(data);
     });
-    socket.on("LTC" + SocketSuffix.UPDATE, (data: string) => {
+    this.socket.on("LTC" + SocketSuffix.UPDATE, (data: string) => {
       this.updateCurrentAgg(data);
     });
   }
@@ -36,7 +46,7 @@ class App extends React.Component<{}, IPricesState> {
       for (const currentAgg of saveArr) {
         const loopAgg = currentAgg as CurrentAgg;
         if (loopAgg.FromCurrency === split[0]) {
-          if (split[2] === "1" || split[2] === "2") {
+          if (split[1] === "1" || split[1] === "2") {
             loopAgg.Flag = split[1];
             loopAgg.Price = Number(split[2]);
           } else {
@@ -52,9 +62,7 @@ class App extends React.Component<{}, IPricesState> {
   public addCurrentAggs(data: CurrentAgg[]) {
     if (data !== undefined) {
       const agg = data as CurrentAgg[];
-      if (this.state.currentAggs === undefined) {
-        this.setState({ currentAggs: agg });
-      }
+      this.setState({ currentAggs: agg });
     }
   }
 
@@ -95,10 +103,27 @@ class App extends React.Component<{}, IPricesState> {
     );
   }
 
+  public handleChange = (e: React.FormEvent<HTMLInputElement>) => {
+    this.setState({ newSub: e.currentTarget.value });
+  }
+
+  public addNewSub() {
+    if (this.state.newSub !== undefined || this.state.newSub !== "") {
+      this.socket.emit('newsub', this.state.newSub);
+    }
+  }
+
   public render() {
     const x = this.NumberList();
     return (
-      <div> {x} </div>
+      <div>
+        <div>
+          <input type="text" onChange={this.handleChange} />
+          <input type="button" value="Add Sub" onClick={this.addNewSub}
+          />
+        </div>
+        <div>{x}</div>
+      </div>
     )
   }
 }
