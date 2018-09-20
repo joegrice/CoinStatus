@@ -8,6 +8,7 @@ import { CurrentAgg } from '../models/CurrentAgg';
 import { CurrentAggFlag } from '../models/CurrentAggFlag';
 import { SocketSuffix } from '../models/SocketSuffix';
 import { Connect } from '../connection/Connect';
+import { SubCode } from '../models/SubCode';
 
 export class CurrentAggStreamService {
 
@@ -23,9 +24,9 @@ export class CurrentAggStreamService {
     addNewSub(message: string): boolean {
         var added: boolean = false;
         var subValues: string[] = message.split("~");
-        var subCode: string = '5~CCCAGG~' + subValues[0] + "~" + subValues[1];
-        if (!this.subExits(subCode)) {
-            this.isNewSubValid(subCode, subValues[0], subValues[1]);
+        var subCode: SubCode = new SubCode(subValues[0], subValues[1]);
+        if (!this.subExits(subCode.getSubCode())) {
+            this.checkSubIsValid(subCode);
         }
         return added;
     }
@@ -40,50 +41,68 @@ export class CurrentAggStreamService {
         return exists;
     }
 
-    isNewSubValid(subCode: string, from: string, to: string) {
-        var valid = false;
+    checkSubIsValid(subCode: SubCode) {
         var connect: Connect = new Connect();
         var outerThis = this;
         connect.callApi("all/exchanges").then(function (priceList) {
-            for (var priceKey in priceList) {
-                if (priceList.hasOwnProperty(priceKey)) {
-                    var exchange = priceList[priceKey];
-                    for (var exchKey in exchange) {
-                        if (exchange.hasOwnProperty(exchKey)) {
-                            var currencyArr: string[] = exchange[exchKey] as string[];
-                            if (from === exchKey && currencyArr !== undefined && currencyArr.length > 0) {
-                                for (var i = 0; i < currencyArr.length; i++) {
-                                    if (to === currencyArr[i]) {
-                                        outerThis.newSubscriptions.push(subCode);
-                                        valid = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (valid) { break; }
-                        }
-                    }
-                    if (valid) { break; }
-                }
+            var subSearch: boolean = outerThis.searchExchanges(subCode, priceList);
+            if (subSearch === true) {
+                outerThis.newSubscriptions.push(subCode.getSubCode());
             }
         }).catch(function (err) {
             console.log(err);
         });
     }
 
+    searchExchanges(subCode: SubCode, priceList: Object): boolean {
+        var valid: boolean = false;
+        for (var priceKey in priceList) {
+            if (priceList.hasOwnProperty(priceKey)) {
+                var exchange = priceList[priceKey];
+                valid = this.searchFromCurrencies(subCode, exchange);
+            }
+            if (valid) { break; }
+        }
+        return valid;
+    }
+
+    searchFromCurrencies(subCode: SubCode, exchange: Object[]): boolean {
+        var valid: boolean = false;
+        for (var exchKey in exchange) {
+            if (exchange.hasOwnProperty(exchKey)) {
+                var currencyArr: string[] = exchange[exchKey] as string[];
+                if (subCode.getFrom() === exchKey && currencyArr !== undefined && currencyArr.length > 0) {
+                    valid = this.searchToCurrencies(subCode, currencyArr);
+                }
+            }
+            if (valid) { break; }
+        }
+        return valid;
+    }
+
+    searchToCurrencies(subCode: SubCode, currencyArr: string[]): boolean {
+        var valid: boolean = false;
+        for (var i = 0; i < currencyArr.length; i++) {
+            if (subCode.getTo() === currencyArr[i]) {
+                valid = true;
+                break;
+            }
+        }
+        return valid;
+    }
+
     activateStream(): void {
         this.currentAggs = [];
         var socket = ioClient.connect('https://streamer.cryptocompare.com/');
         socket.emit('SubAdd', { subs: this.subscriptions });
-        const streamThis = this;
+        const outerThis = this;
         socket.on("m", function (message: string) {
-            // console.log(message);
-            streamThis.checkForNewSubs(socket);
-            streamThis.handleStreamMessage(message);
+            outerThis.checkForNewSubs(socket);
+            outerThis.handleStreamMessage(message);
         });
     }
 
-    checkForNewSubs(socket: SocketIOClient.Socket) {
+    checkForNewSubs(socket: SocketIOClient.Socket): void {
         if (this.newSubscriptions.length > 0) {
             for (var i = 0; i < this.newSubscriptions.length; i++) {
                 var subCode: string = this.newSubscriptions[i];
@@ -92,12 +111,13 @@ export class CurrentAggStreamService {
                 this.io.emit("newsocket", from);
                 console.log("NEW SUBS ADDED: " + from);
             }
+            // Send new subs to API
             socket.emit('SubAdd', { subs: this.newSubscriptions });
             this.newSubscriptions = [];
         }
     }
 
-    handleStreamMessage(message: string) {
+    handleStreamMessage(message: string): void {
         var messageType = message.substring(0, message.indexOf("~"));
         switch (messageType) {
             case "3":
@@ -145,16 +165,10 @@ export class CurrentAggStreamService {
         const price: string = valuesArray[5];
         if (flag as CurrentAggFlag === CurrentAggFlag.PRICEUP) {
             this.io.emit(currency + SocketSuffix.UPDATE, currency + "~" + flag + "~" + price);
-            // console.log("EMIT: " + currency + SocketSuffix.UPDATE, currency + "~" + flag + "~" + price);
-            //console.log(this.getCurrentTime() + " - " + currency + ": PRICE UP ~ " + price);
         } else if (flag as CurrentAggFlag === CurrentAggFlag.PRICEDOWN) {
             this.io.emit(currency + SocketSuffix.UPDATE, currency + "~" + flag + "~" + price);
-            // console.log("EMIT: " + currency + SocketSuffix.UPDATE, currency + "~" + flag + "~" + price);
-            //console.log(this.getCurrentTime() + " - " + currency + ": PRICE DOWN ~ " + price);
         } else if (flag as CurrentAggFlag === CurrentAggFlag.PRICEUNCHANGED) {
             this.io.emit(currency + SocketSuffix.UPDATE, currency + "~" + flag);
-            // console.log("EMIT: " + currency + SocketSuffix.UPDATE, currency + "~" + flag);
-            //console.log(this.getCurrentTime() + " - " + currency + ": PRICE UNCHANGED");
         }
     }
 }
