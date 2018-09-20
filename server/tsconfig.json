@@ -5,8 +5,7 @@
     "module": "commonjs",
     "sourceMap": true,
     "outDir": "dist",
-    "rootDir": "src",
-    "mapRoot": "dist"
+    "rootDir": "src"
   },
   "include": [
     "src/**/*.ts"

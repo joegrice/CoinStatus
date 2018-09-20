@@ -147,28 +147,25 @@ export class CurrentAggStreamService {
 
     emitCurrentAgg(message: string): void {
         var valuesArray = message.split("~");
+        const newAgg = new CurrentAgg(message);
         if (valuesArray.length === 22) {
-            const newAgg = new CurrentAgg(message);
             if (newAgg !== undefined) {
                 this.currentAggs.push(newAgg);
             } else {
                 console.log("New CurrentAgg is invalid.")
             }
         } else {
-            this.handleCurrentAggUpdate(valuesArray);
+            this.handleCurrentAggUpdate(newAgg);
         }
     }
 
-    handleCurrentAggUpdate(valuesArray: string[]): void {
-        const currency: string = valuesArray[2];
-        const flag: string = valuesArray[4];
-        const price: string = valuesArray[5];
-        if (flag as CurrentAggFlag === CurrentAggFlag.PRICEUP) {
-            this.io.emit(currency + SocketSuffix.UPDATE, currency + "~" + flag + "~" + price);
-        } else if (flag as CurrentAggFlag === CurrentAggFlag.PRICEDOWN) {
-            this.io.emit(currency + SocketSuffix.UPDATE, currency + "~" + flag + "~" + price);
-        } else if (flag as CurrentAggFlag === CurrentAggFlag.PRICEUNCHANGED) {
-            this.io.emit(currency + SocketSuffix.UPDATE, currency + "~" + flag);
+    handleCurrentAggUpdate(newAgg: CurrentAgg): void {
+        if (newAgg.Flag as CurrentAggFlag === CurrentAggFlag.PRICEUP) {
+            this.io.emit(newAgg.FromCurrency + SocketSuffix.UPDATE, newAgg.FromCurrency + "~" + newAgg.Flag + "~" + newAgg.Price);
+        } else if (newAgg.Flag as CurrentAggFlag === CurrentAggFlag.PRICEDOWN) {
+            this.io.emit(newAgg.FromCurrency + SocketSuffix.UPDATE, newAgg.FromCurrency + "~" + newAgg.Flag + "~" + newAgg.Price);
+        } else if (newAgg.Flag as CurrentAggFlag === CurrentAggFlag.PRICEUNCHANGED) {
+            this.io.emit(newAgg.FromCurrency + SocketSuffix.UPDATE, newAgg.FromCurrency + "~" + newAgg.Flag);
         }
     }
 }

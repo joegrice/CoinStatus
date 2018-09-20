@@ -87,9 +87,7 @@ class App extends React.Component<{}, IPricesState> {
         // Correct! Key should be specified inside the array.
         <div className={agg.FromCurrency} key={index}>
           <p style={{ backgroundColor: this.bgColourRender(agg.Flag) }} key={index}>
-            {agg.FromCurrency} -
-            {agg.ToCurrency} : $
-            {agg.Price}</p>
+            {agg.FromSymbol} {agg.FromCurrency} : {agg.ToSymbol}{agg.Price}</p>
         </div>
       );
     } else {
