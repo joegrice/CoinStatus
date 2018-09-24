@@ -1,7 +1,6 @@
 import './App.css';
 import * as io from 'socket.io-client';
 import * as React from 'react';
-import { SocketSuffix } from './models/SocketSuffix';
 
 // import logo from './logo.svg';
 
@@ -25,32 +24,31 @@ class App extends React.Component<{}, IPricesState> {
       this.addCurrentAggs(data);
     });
     this.socket.on("newsocket", (data: string) => {
-      this.socket.on(data + SocketSuffix.UPDATE, (updateData: string) => {
-        this.updateCurrentAgg(updateData);
+      this.socket.on(data, (app: CurrentAgg) => {
+        this.updateCurrentAgg(app);
       });
     });
-    this.socket.on("BTC" + SocketSuffix.UPDATE, (data: string) => {
-      this.updateCurrentAgg(data);
+    this.socket.on("BTC~USD", (agg: CurrentAgg) => {
+      this.updateCurrentAgg(agg);
     });
-    this.socket.on("LTC" + SocketSuffix.UPDATE, (data: string) => {
-      this.updateCurrentAgg(data);
+    this.socket.on("LTC~USD", (agg: CurrentAgg) => {
+      this.updateCurrentAgg(agg);
     });
   }
 
-  public updateCurrentAgg(message: string) {
-    const split: string[] = message.split("~");
+  public updateCurrentAgg(agg: CurrentAgg) {
     if (this.state.currentAggs === undefined) {
       // TODO: ADD WAY TO DEAL WITH ERROR
     } else {
       const saveArr = this.state.currentAggs;
       for (const currentAgg of saveArr) {
         const loopAgg = currentAgg as CurrentAgg;
-        if (loopAgg.FromCurrency === split[0]) {
-          if (split[1] === "1" || split[1] === "2") {
-            loopAgg.Flag = split[1];
-            loopAgg.Price = Number(split[2]);
+        if (loopAgg.FROMCURRENCY === agg.FROMCURRENCY) {
+          if (agg.FLAGS === "1" || agg.FLAGS === "2") {
+            loopAgg.FLAGS = agg.FLAGS;
+            loopAgg.PRICE = agg.PRICE;
           } else {
-            loopAgg.Flag = split[1];
+            loopAgg.FLAGS = agg.FLAGS;
           }
           break;
         }
@@ -85,9 +83,9 @@ class App extends React.Component<{}, IPricesState> {
     if (this.state.currentAggs !== undefined && this.state.currentAggs.length > 0) {
       listItems = this.state.currentAggs.map((agg: CurrentAgg, index) =>
         // Correct! Key should be specified inside the array.
-        <div className={agg.FromCurrency} key={index}>
-          <p style={{ backgroundColor: this.bgColourRender(agg.Flag) }} key={index}>
-            {agg.FromSymbol} {agg.FromCurrency} : {agg.ToSymbol}{agg.Price}</p>
+        <div className={agg.FROMCURRENCY} key={index}>
+          <p style={{ backgroundColor: this.bgColourRender(agg.FLAGS) }} key={index}>
+            {agg.FROMCURRENCY} : {agg.TOSYMBOL}{agg.PRICE}</p>
         </div>
       );
     } else {

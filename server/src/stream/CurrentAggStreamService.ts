@@ -9,11 +9,12 @@ import { CurrentAggFlag } from '../models/CurrentAggFlag';
 import { SocketSuffix } from '../models/SocketSuffix';
 import { Connect } from '../connection/Connect';
 import { SubCode } from '../models/SubCode';
+import { CurrentAggFactory } from '../CurrentAggFactory';
 
 export class CurrentAggStreamService {
 
     io: socketIo.Server;
-    newSubscriptions: string[] = [];
+    newSubscriptions: SubCode[] = [];
     subscriptions: string[] = ['5~CCCAGG~BTC~USD', '5~CCCAGG~LTC~USD'];
     currentAggs: CurrentAgg[];
 
@@ -47,7 +48,7 @@ export class CurrentAggStreamService {
         connect.callApi("all/exchanges").then(function (priceList) {
             var subSearch: boolean = outerThis.searchExchanges(subCode, priceList);
             if (subSearch === true) {
-                outerThis.newSubscriptions.push(subCode.getSubCode());
+                outerThis.newSubscriptions.push(subCode);
             }
         }).catch(function (err) {
             console.log(err);
@@ -105,16 +106,24 @@ export class CurrentAggStreamService {
     checkForNewSubs(socket: SocketIOClient.Socket): void {
         if (this.newSubscriptions.length > 0) {
             for (var i = 0; i < this.newSubscriptions.length; i++) {
-                var subCode: string = this.newSubscriptions[i];
-                this.subscriptions.push(subCode);
-                var from: string = subCode.split("~")[2];
-                this.io.emit("newsocket", from);
-                console.log("NEW SUBS ADDED: " + from);
+                var subCode: SubCode = this.newSubscriptions[i];
+                this.subscriptions.push(subCode.getSubCode());
+                this.io.emit("newsocket", subCode.getFrom() + "~" + subCode.getTo());
+                console.log("NEW SUBS ADDED: " + subCode.getFrom());
             }
             // Send new subs to API
-            socket.emit('SubAdd', { subs: this.newSubscriptions });
+            const newSubCodes: string[] = this.getListOfNewSubCodes();
+            socket.emit('SubAdd', { subs: newSubCodes });
             this.newSubscriptions = [];
         }
+    }
+
+    getListOfNewSubCodes() {
+        var subCodes: string[] = [];
+        for (const subCode of this.newSubscriptions) {
+            subCodes.push(subCode.getSubCode());
+        }
+        return subCodes;
     }
 
     handleStreamMessage(message: string): void {
@@ -147,25 +156,21 @@ export class CurrentAggStreamService {
 
     emitCurrentAgg(message: string): void {
         var valuesArray = message.split("~");
-        const newAgg = new CurrentAgg(message);
+        const aggFactory = new CurrentAggFactory(message);
+        var newAgg: CurrentAgg = aggFactory.newCurrentAgg();
         if (valuesArray.length === 22) {
-            if (newAgg !== undefined) {
-                this.currentAggs.push(newAgg);
-            } else {
-                console.log("New CurrentAgg is invalid.")
-            }
+            this.currentAggs.push(newAgg);
         } else {
-            this.handleCurrentAggUpdate(newAgg);
+            for (var agg of this.currentAggs) {
+                if (agg.FROMCURRENCY === newAgg.FROMCURRENCY && agg.TOCURRENCY === newAgg.TOCURRENCY) {
+                    aggFactory.updateAgg(agg);
+                    this.handleCurrentAggUpdate(newAgg);
+                }
+            }
         }
     }
 
     handleCurrentAggUpdate(newAgg: CurrentAgg): void {
-        if (newAgg.Flag as CurrentAggFlag === CurrentAggFlag.PRICEUP) {
-            this.io.emit(newAgg.FromCurrency + SocketSuffix.UPDATE, newAgg.FromCurrency + "~" + newAgg.Flag + "~" + newAgg.Price);
-        } else if (newAgg.Flag as CurrentAggFlag === CurrentAggFlag.PRICEDOWN) {
-            this.io.emit(newAgg.FromCurrency + SocketSuffix.UPDATE, newAgg.FromCurrency + "~" + newAgg.Flag + "~" + newAgg.Price);
-        } else if (newAgg.Flag as CurrentAggFlag === CurrentAggFlag.PRICEUNCHANGED) {
-            this.io.emit(newAgg.FromCurrency + SocketSuffix.UPDATE, newAgg.FromCurrency + "~" + newAgg.Flag);
-        }
+        this.io.emit(newAgg.FROMCURRENCY + "~" + newAgg.TOCURRENCY, newAgg);
     }
 }

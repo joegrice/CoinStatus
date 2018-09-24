@@ -17,7 +17,7 @@ export class Currency {
         'BRL': 'R$'
     };
 
-    public static get(currenct: string) {
-        return this.SYMBOLS[currenct];
+    public static get(currency: string) {
+        return this.SYMBOLS[currency] || currency;
     }
 }
