@@ -94,7 +94,7 @@ export class CurrentAggFactory {
             case `HIGH24HOUR`: currentAgg.HIGH24HOUR = unpacked[key]; break;
             case `LOW24HOUR`: currentAgg.LOW24HOUR = unpacked[key]; break;
             case `LASTMARKET`: currentAgg.LASTMARKET = unpacked[key]; break;
-            default: 'Property not found.'; break;
+            default: console.log('Property not found.'); break;
         }
     }
 
