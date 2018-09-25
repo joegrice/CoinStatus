@@ -7,7 +7,7 @@
         {
             "type": "node",
             "request": "launch",
-            //"preLaunchTask": "tsBuild",
+            "preLaunchTask": "tsBuild",
             "name": "Launch Program",
             "program": "${workspaceFolder}\\src\\index.ts",
             "sourceMaps": true,
