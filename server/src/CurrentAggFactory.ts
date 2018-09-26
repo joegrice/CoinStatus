@@ -68,7 +68,7 @@ export class CurrentAggFactory {
 
     updateProperty(currentAgg: CurrentAgg, unpacked: Object, key: string) {
         switch (key) {
-            case `TYPE`: currentAgg.TYPE = unpacked[unpacked[key]]; break;
+            case `TYPE`: currentAgg.TYPE = unpacked[key]; break;
             case `MARKET`: currentAgg.MARKET = unpacked[key]; break;
             case `FROMSYMBOL`: currentAgg.FROMCURRENCY = unpacked[key];
                 currentAgg.FROMSYMBOL = Currency.get(unpacked[key]); break;
