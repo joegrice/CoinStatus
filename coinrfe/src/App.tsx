@@ -77,15 +77,36 @@ class App extends React.Component<{}, IPricesState> {
     }
   }
 
+  public getPercentageChange(oldNumber: number, newNumber: number): number{
+    const decreaseValue: number = oldNumber - newNumber;
+    return (decreaseValue / oldNumber) * 100;
+}
+
+  public TwentyFourHourPercentageDiff(currentAgg: CurrentAgg): JSX.Element {
+    let change: JSX.Element = <div>Loading...</div>;
+    const changeVal: number = this.getPercentageChange(currentAgg.OPEN24HOUR, currentAgg.PRICE);
+    if (changeVal > 0) {
+      const fixed: string = changeVal.toFixed(2);
+      change = <span style={{ backgroundColor: this.bgColourRender("1") }}>{fixed}%</span>;
+    } else if (changeVal < 0) {
+      const fixed: string = changeVal.toFixed(2);
+      change = <span style={{ backgroundColor: this.bgColourRender("2") }}>{fixed}%</span>;
+    } if (changeVal === 0) {
+      const fixed: string = changeVal.toFixed(2);
+      change = <span style={{ backgroundColor: this.bgColourRender("4") }}>{fixed}%</span>;
+    }
+    return change;
+  }
+
   public NumberList() {
     let listItems: JSX.Element[];
-
     if (this.state.currentAggs !== undefined && this.state.currentAggs.length > 0) {
       listItems = this.state.currentAggs.map((agg: CurrentAgg, index) =>
         // Correct! Key should be specified inside the array.
         <div className={agg.FROMCURRENCY} key={index}>
-          <p style={{ backgroundColor: this.bgColourRender(agg.FLAGS) }} key={index}>
-            {agg.FROMCURRENCY} : {agg.TOSYMBOL}{agg.PRICE}</p>
+          <p>
+            {agg.FROMSYMBOL} {agg.FROMCURRENCY} : {agg.TOSYMBOL} <span style={{ backgroundColor: this.bgColourRender(agg.FLAGS) }}>{agg.PRICE}</span> {this.TwentyFourHourPercentageDiff(agg)}
+          </p>
         </div>
       );
     } else {
