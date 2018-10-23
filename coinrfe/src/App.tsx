@@ -77,10 +77,10 @@ class App extends React.Component<{}, IPricesState> {
     }
   }
 
-  public getPercentageChange(oldNumber: number, newNumber: number): number{
+  public getPercentageChange(oldNumber: number, newNumber: number): number {
     const decreaseValue: number = oldNumber - newNumber;
     return (decreaseValue / oldNumber) * 100;
-}
+  }
 
   public TwentyFourHourPercentageDiff(currentAgg: CurrentAgg): JSX.Element {
     let change: JSX.Element = <div>Loading...</div>;
@@ -103,20 +103,22 @@ class App extends React.Component<{}, IPricesState> {
     if (this.state.currentAggs !== undefined && this.state.currentAggs.length > 0) {
       listItems = this.state.currentAggs.map((agg: CurrentAgg, index) =>
         // Correct! Key should be specified inside the array.
-        <div className={agg.FROMCURRENCY} key={index}>
-          <p>
-            {agg.FROMSYMBOL} {agg.FROMCURRENCY} : {agg.TOSYMBOL} <span style={{ backgroundColor: this.bgColourRender(agg.FLAGS) }}>{agg.PRICE}</span> {this.TwentyFourHourPercentageDiff(agg)}
-          </p>
-        </div>
+        <tr className={agg.FROMCURRENCY} key={index}>
+          <th scope="row">{index}</th>
+          <td>{agg.FROMSYMBOL}</td>
+          <td>{agg.TOSYMBOL}</td>
+          <td><span style={{ backgroundColor: this.bgColourRender(agg.FLAGS) }}>{agg.PRICE}</span></td>
+          <td>{this.TwentyFourHourPercentageDiff(agg)}</td>
+        </tr>
       );
     } else {
       listItems = new Array();
-      listItems[0] = <div key={2}>Loading...</div>
+      listItems[0] = <tr key={2}><td>Loading...</td></tr>;
     }
     return (
-      <ul>
+      <tbody>
         {listItems}
-      </ul>
+      </tbody>
     );
   }
 
@@ -139,7 +141,20 @@ class App extends React.Component<{}, IPricesState> {
           <input type="button" value="Add Sub" onClick={this.addNewSub}
           />
         </div>
-        <div>{x}</div>
+        <table className="table">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">From</th>
+              <th scope="col">To</th>
+              <th scope="col">Price</th>
+              <th scope="col">24 Hr</th>
+            </tr>
+          </thead>
+
+          {x}
+
+        </table>
       </div>
     )
   }
